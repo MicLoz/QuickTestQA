@@ -242,7 +242,6 @@ def create_sample_case():
     s2 = TestStep(description="Login as test user", expected_result="Dashboard visible")
     s3 = TestStep(description="Navigate to Reports", expected_result="Reports page loads")
     tc = TestCase(title="Basic smoke: app start & reports", steps=[s1, s2, s3])
-    ##save_cases([tc.to_dict()]) OLD CODE - Remove
     save_items("case", [tc.to_dict()])
     print(f"Sample test case created: {tc.title}")
 
@@ -252,8 +251,7 @@ def create_sample_case():
 # -----------------------------
 
 def list_cases():
-    ##cases = load_cases() or [] ## OLD CODE
-    cases = get_items("case")
+    cases = get_items("case") or []
     if not cases:
         print("No test cases found. Use --init-sample to create one.")
         return
@@ -263,8 +261,7 @@ def list_cases():
 
 
 def run_by_title(title: str):
-    ##cases = load_cases() or [] ## OLD CODE
-    cases = get_items("case") 
+    cases = get_items("case") or []
     match = None
     for c in cases:
         if c.get("title") == title:
@@ -300,11 +297,9 @@ def add_case_interactive():
     if not steps:
         print("No steps added; aborting.")
         return
-    ##cases = load_cases() or [] OLD CODE
     cases = get_items("case") or []
     tc = TestCase(title=title, steps=[TestStep(**s) for s in steps])
     cases.append(tc.to_dict())
-    ##save_cases(cases)  ## OLD CODE
     save_items("case", cases)
     print(f"Saved test case '{title}'")
 
