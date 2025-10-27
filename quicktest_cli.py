@@ -43,10 +43,8 @@ def ensure_dirs():
     os.makedirs(DATA_DIR, exist_ok=True)
     os.makedirs(EVIDENCE_DIR, exist_ok=True)
 
-
 def now_iso():
     return datetime.now().isoformat()
-
 
 # -----------------------------
 # Models
@@ -76,7 +74,6 @@ class TestCase:
             "steps": [s.to_dict() for s in self.steps],
         }
 
-
 @dataclass
 class TestPlan:
     name: str
@@ -90,6 +87,14 @@ class TestPlan:
 # -----------------------------
 # Storage
 # -----------------------------
+
+def get_items(kind):
+    path = {"case": CASES_FILE, "plan": PLANS_FILE, "exec": EXECUTIONS_FILE}[kind]
+    return load_json(path)
+
+def save_items(kind, data):
+    path = {"case": CASES_FILE, "plan": PLANS_FILE, "exec": EXECUTIONS_FILE}[kind]
+    save_json(path, data)
 
 def load_json(path) -> Optional[List[Dict]]:
     if not os.path.exists(path):
@@ -106,12 +111,12 @@ def save_json(path, data):
         json.dump(data, f, indent=2, ensure_ascii=False)
 
 
-def load_cases() -> List[Dict]:
-    return load_json(CASES_FILE)
+##def load_cases() -> List[Dict]:
+##    return load_json(CASES_FILE)
 
 
-def save_cases(cases: List[Dict]):
-    save_json(CASES_FILE, cases)
+##def save_cases(cases: List[Dict]):
+##    save_json(CASES_FILE, cases)
 
 
 def load_executions() -> List[Dict]:
@@ -237,7 +242,8 @@ def create_sample_case():
     s2 = TestStep(description="Login as test user", expected_result="Dashboard visible")
     s3 = TestStep(description="Navigate to Reports", expected_result="Reports page loads")
     tc = TestCase(title="Basic smoke: app start & reports", steps=[s1, s2, s3])
-    save_cases([tc.to_dict()])
+    ##save_cases([tc.to_dict()]) OLD CODE - Remove
+    save_items("case", [tc.to_dict()])
     print(f"Sample test case created: {tc.title}")
 
 
@@ -246,7 +252,8 @@ def create_sample_case():
 # -----------------------------
 
 def list_cases():
-    cases = load_cases() or []
+    ##cases = load_cases() or [] ## OLD CODE
+    cases = get_items("case")
     if not cases:
         print("No test cases found. Use --init-sample to create one.")
         return
@@ -256,7 +263,8 @@ def list_cases():
 
 
 def run_by_title(title: str):
-    cases = load_cases() or []
+    ##cases = load_cases() or [] ## OLD CODE
+    cases = get_items("case") 
     match = None
     for c in cases:
         if c.get("title") == title:
@@ -292,10 +300,12 @@ def add_case_interactive():
     if not steps:
         print("No steps added; aborting.")
         return
-    cases = load_cases() or []
+    ##cases = load_cases() or [] OLD CODE
+    cases = get_items("case") or []
     tc = TestCase(title=title, steps=[TestStep(**s) for s in steps])
     cases.append(tc.to_dict())
-    save_cases(cases)
+    ##save_cases(cases)  ## OLD CODE
+    save_items("case", cases)
     print(f"Saved test case '{title}'")
 
 
