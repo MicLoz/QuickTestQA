@@ -1,0 +1,31 @@
+# Ignore IDE-specific files
+*.iml
+.idea/
+.vscode/
+
+# Ignore Python cache files
+*.pyc
+__pycache__/
+
+# Ignore virtual environment folders
+venv/
+env/
+
+# Ignore Streamlit and log files
+*.log
+*.db
+
+# Ignore macOS system files
+.DS_Store
+
+#Ignore XML local config files
+DataEngineeringPortfolio.xml
+misc.xml
+modules.xml
+profiles_settings.xml
+Project_Defatult.xml
+vcs.xml
+
+# Local data & evidence
+data/
+evidence/
