@@ -23,6 +23,7 @@ import os
 import uuid
 from dataclasses import dataclass, asdict, field
 from datetime import datetime
+from itertools import filterfalse
 from typing import List, Dict, Optional
 
 # -----------------------------
@@ -94,14 +95,28 @@ def get_items(kind):
 
 def save_items(kind, data):
     path = {"case": CASES_FILE, "plan": PLANS_FILE, "exec": EXECUTIONS_FILE}[kind]
-    save_json(path, data)
+    if kind == "exec":
+        # Load existing executions
+        existing = load_json(path) or []
+        # Append the new execution record (single dict)
+        existing.append(data)
+        save_json(path, existing)
+    else:
+        # For cases and plans, we save the whole list (overwrite)
+        save_json(path, data)
 
 def load_json(path) -> Optional[List[Dict]]:
     if not os.path.exists(path):
         return []
     with open(path, "r", encoding="utf-8") as f:
         try:
-            return json.load(f)
+            data = json.load(f)
+            if isinstance(data, dict):
+                return [data]
+            elif isinstance(data, list):
+                return data
+            else:
+                return []
         except json.JSONDecodeError:
             return []
 
@@ -109,25 +124,6 @@ def load_json(path) -> Optional[List[Dict]]:
 def save_json(path, data):
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
-
-
-##def load_cases() -> List[Dict]:
-##    return load_json(CASES_FILE)
-
-
-##def save_cases(cases: List[Dict]):
-##    save_json(CASES_FILE, cases)
-
-
-def load_executions() -> List[Dict]:
-    return load_json(EXECUTIONS_FILE)
-
-
-def save_execution(exec_record: Dict):
-    records = load_executions() or []
-    records.append(exec_record)
-    save_json(EXECUTIONS_FILE, records)
-
 
 # -----------------------------
 # Evidence capture
@@ -228,7 +224,7 @@ def run_test_case_interactive(case_dict: Dict) -> Dict:
         "results": results,
     }
 
-    save_execution(exec_record)
+    save_items("exec", exec_record)
     print(f"\nExecution saved: {exec_record['execution_id']}")
     return exec_record
 
@@ -274,7 +270,7 @@ def run_by_title(title: str):
 
 
 def show_executions():
-    records = load_executions() or []
+    records = get_items("exec") or []
     if not records:
         print("No executions recorded yet.")
         return
@@ -285,7 +281,19 @@ def show_executions():
 
 
 def add_case_interactive():
-    title = input("New test case title: ").strip()
+    cases = get_items("case") or []
+
+    while True:
+        title = input("New test case title: ").strip()
+        if not title:
+            print("Title cannot be empty.")
+            return
+
+        if is_new_test_case_title_unique(title, cases):
+            break
+        # Otherwise, prompt again
+        print("Please enter a different title.\n")
+
     steps = []
     print("Enter steps (blank description to finish):")
     while True:
@@ -294,15 +302,24 @@ def add_case_interactive():
             break
         expected = input(" Expected result: ").strip()
         steps.append(TestStep(description=desc, expected_result=expected).to_dict())
+
     if not steps:
         print("No steps added; aborting.")
         return
-    cases = get_items("case") or []
+
     tc = TestCase(title=title, steps=[TestStep(**s) for s in steps])
     cases.append(tc.to_dict())
     save_items("case", cases)
     print(f"Saved test case '{title}'")
 
+def is_new_test_case_title_unique(new_title, cases):
+    # Enforce unique title
+    existing_titles = [c.get("title", "").strip().lower() for c in cases]
+    if new_title.strip().lower() in existing_titles:
+        print(f"A test case with the title '{new_title}' already exists. Please choose a unique name.")
+        return False
+    else:
+        return True
 
 def parse_args_and_run():
     parser = argparse.ArgumentParser(description="QuickTest CLI - local test runner")
