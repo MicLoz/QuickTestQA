@@ -228,6 +228,141 @@ def run_test_case_interactive(case_dict: Dict) -> Dict:
     print(f"\nExecution saved: {exec_record['execution_id']}")
     return exec_record
 
+# -----------------------------
+# Editing a Test Case
+# -----------------------------
+def edit_test_case_interactive(case_dict: Dict):
+    title = case_dict.get("title")
+    print(f"Editing test case: {title}.")
+    user_action = input("Action: (R=Rename, E=Edit Test Steps, X=Exit)").strip().lower()
+
+    if user_action == "r":
+        cases = get_items("case") or []
+        while True:
+            renamed_title = input("New test case title: ").strip()
+            if not renamed_title:
+                print("Title cannot be empty.")
+                return
+
+            if is_new_test_case_title_unique(renamed_title, cases):
+                # After editing, save updated title to file
+                for c in cases:
+                    if c.get("title") == title:
+                        c["title"] = renamed_title
+                        break
+                save_items("case", cases)
+                break
+            # Otherwise, prompt again
+            print("Please enter a unique title.\n")
+
+    if user_action == "e":
+        steps = case_dict.get("steps", [])
+        if not steps:
+            print("No steps found for this test case.")
+            return
+
+        while True:
+            print("\nTest Steps:")
+            for i, step in enumerate(steps, start=1):
+                print(f"{i}. {step.get('description', '')}  -> Expected: {step.get('expected_result', '')}")
+
+            choice = input(
+                "\nEnter step number to edit.\n"
+                "Press R to Reorder steps.\n"
+                "Press A to Add a new step.\n"
+                "Press C to Copy an exiting step.\n"
+                "(or press Enter to finish): "
+            ).strip().lower()
+
+            #Choice is blank
+            if not choice:
+                break # break's execution.
+
+            if choice == "r":
+                if len(steps) > 1:
+                    print("\nReorder steps:")
+                    print("Current order:")
+                    for i, step in enumerate(steps, start=1):
+                        print(f"{i}. {step.get('description', '')}")
+
+                    try:
+                        old_index = int(input("Enter step number to move: ").strip()) - 1
+                        if not (0 <= old_index < len(steps)):
+                            print("Invalid source step number.")
+                            continue
+                        new_index = int(input("Enter new position number: ").strip()) - 1
+                        if not (0 <= new_index < len(steps)):
+                            print("Invalid destination position.")
+                            continue
+
+                        # Move the step
+                        step_to_move = steps.pop(old_index)
+                        steps.insert(new_index, step_to_move)
+
+                        print(f"Moved step {old_index + 1} → {new_index + 1}.")
+                    except ValueError:
+                        print("Invalid input. Please enter numeric step positions.")
+                else:
+                    print("There must be more than 1 step in a test case to allow reordering.")
+                continue  # Return to step menu
+
+            #Add new step
+            if choice == "a":
+                steps = add_test_step_interactive(steps)
+                continue
+
+            #Copy Existing Test Step
+            if choice == "c":
+                steps = copy_test_step_interactive(steps)
+                continue
+
+            # From here on, handle step editing
+            elif not choice.isdigit() or not (1 <= int(choice) <= len(steps)):
+                print("Invalid choice. Please enter a valid step number.")
+                continue
+
+            step_index = int(choice) - 1
+            step = steps[step_index]
+
+            print(f"\nSelected Step {choice}:")
+            print(f"Description: {step.get('description', '')}")
+            print(f"Expected Result: {step.get('expected_result', '')}")
+
+            edit_action = input("Edit (d=Description, e=Expected, b=Both, x=Cancel): ").strip().lower()
+            if edit_action == "x":
+                continue
+
+            if edit_action in ("d", "b"):
+                print(f"Current description: {step.get('description', '')}")
+                new_desc = input("New description (leave blank to keep current): ").strip()
+                if new_desc:
+                    step["description"] = new_desc
+
+            if edit_action in ("e", "b"):
+                print(f"Current expected result: {step.get('expected_result', '')}")
+                new_exp = input("New expected result (leave blank to keep current): ").strip()
+                if new_exp:
+                    step["expected_result"] = new_exp
+
+            # Save back the modified step
+            steps[step_index] = step
+
+            print("\nStep updated.")
+            cont = input("Edit another step? (y/n): ").strip().lower()
+            if cont != "y":
+                break
+
+        # After editing/reordering, save updated steps to file
+        cases = get_items("case") or []
+        for c in cases:
+            if c.get("title") == title:
+                c["steps"] = steps
+                break
+        save_items("case", cases)
+        print(f"Test case '{title}' updated successfully.")
+
+        if user_action == "x":
+            return
 
 # -----------------------------
 # Helpers: sample data creation
@@ -256,18 +391,27 @@ def list_cases():
         print(f" - {c.get('title')}  (id: {c.get('id')})")
 
 
-def run_by_title(title: str):
+def run_by_title(titlep: str):
+    matching_case = check_for_matching_test_case_by_title(titlep)
+    if matching_case is not None:
+        run_test_case_interactive(matching_case)
+
+def edit_by_title(titlep: str):
+    matching_case = check_for_matching_test_case_by_title(titlep)
+    if matching_case is not None:
+        edit_test_case_interactive(matching_case)
+
+def check_for_matching_test_case_by_title(titlep: str):
     cases = get_items("case") or []
+    title_lwr = titlep.strip().lower()
     match = None
     for c in cases:
-        if c.get("title") == title:
+        if c.get("title").lower() == title_lwr:
             match = c
-            break
+            return match
     if not match:
-        print(f"No test case with title '{title}' found.")
-        return
-    run_test_case_interactive(match)
-
+        print(f"No test case with title '{title_lwr}' found.")
+        return match
 
 def show_executions():
     records = get_items("exec") or []
@@ -278,7 +422,6 @@ def show_executions():
         print(f"Execution {r.get('execution_id')} - {r.get('title')} - started {r.get('started_at')}")
         for idx, res in enumerate(r.get('results', []), start=1):
             print(f"  Step {idx}: {res.get('outcome')}  screenshot: {res.get('screenshot')}")
-
 
 def add_case_interactive():
     cases = get_items("case") or []
@@ -292,9 +435,17 @@ def add_case_interactive():
         if is_new_test_case_title_unique(title, cases):
             break
         # Otherwise, prompt again
-        print("Please enter a different title.\n")
+        print("Please enter a unique title.\n")
 
     steps = []
+    steps = add_test_step_interactive(steps)
+
+    tc = TestCase(title=title, steps=[TestStep(**s) for s in steps])
+    cases.append(tc.to_dict())
+    save_items("case", cases)
+    print(f"Saved test case '{title}'")
+
+def add_test_step_interactive(steps):
     print("Enter steps (blank description to finish):")
     while True:
         desc = input(" Step description: ").strip()
@@ -302,15 +453,14 @@ def add_case_interactive():
             break
         expected = input(" Expected result: ").strip()
         steps.append(TestStep(description=desc, expected_result=expected).to_dict())
+        return steps
 
     if not steps:
         print("No steps added; aborting.")
-        return
+        return steps
 
-    tc = TestCase(title=title, steps=[TestStep(**s) for s in steps])
-    cases.append(tc.to_dict())
-    save_items("case", cases)
-    print(f"Saved test case '{title}'")
+#def copy_test_step_interactive(steps): New code to implement.
+
 
 def is_new_test_case_title_unique(new_title, cases):
     # Enforce unique title
@@ -328,6 +478,7 @@ def parse_args_and_run():
     parser.add_argument("--run", metavar='TITLE', help="Run a test case by title")
     parser.add_argument("--executions", action="store_true", help="Show past executions")
     parser.add_argument("--add", action="store_true", help="Interactively add a new test case")
+    parser.add_argument("--edit", metavar='TITLE', help="Edit a test case by title")
 
     args = parser.parse_args()
 
@@ -347,6 +498,9 @@ def parse_args_and_run():
         return
     if args.run:
         run_by_title(args.run)
+        return
+    if args.edit:
+        edit_by_title(args.edit)
         return
 
     parser.print_help()
