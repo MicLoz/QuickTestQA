@@ -311,10 +311,10 @@ def edit_test_case_interactive(case_dict: Dict):
                 steps = add_test_step_interactive(steps)
                 continue
 
-            #Copy Existing Test Step
-            if choice == "c":
-                steps = copy_test_step_interactive(steps)
-                continue
+            #Copy Existing Test Step - New code to implement.
+#if choice == "c":
+#                steps = copy_test_step_interactive(steps)
+#                continue
 
             # From here on, handle step editing
             elif not choice.isdigit() or not (1 <= int(choice) <= len(steps)):
