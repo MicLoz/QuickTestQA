@@ -312,9 +312,14 @@ def edit_test_case_interactive(case_dict: Dict):
                 continue
 
             #Copy Existing Test Step - New code to implement.
-#if choice == "c":
-#                steps = copy_test_step_interactive(steps)
-#                continue
+            if choice == "c":
+                steps = copy_test_step_interactive(steps)
+                continue
+
+            #Delete Test Step
+            if choice == "d":
+                steps = delete_test_step_interactive(steps)
+                continue
 
             # From here on, handle step editing
             elif not choice.isdigit() or not (1 <= int(choice) <= len(steps)):
@@ -459,8 +464,107 @@ def add_test_step_interactive(steps):
         print("No steps added; aborting.")
         return steps
 
-#def copy_test_step_interactive(steps): New code to implement.
+def copy_test_step_interactive(steps):
+    if not steps:
+        print("No steps available to copy.")
+        return steps
 
+    # Display current steps
+    print("\nCurrent Test Steps:")
+    for i, step in enumerate(steps, start=1):
+        print(f"{i}. {step.get('description', '')}  -> Expected: {step.get('expected_result', '')}")
+
+    # Ask user which step to copy
+    try:
+        copy_index = int(input("\nEnter the number of the step you want to copy (or press Enter to cancel): ").strip() or 0) - 1
+        if copy_index < 0 or copy_index >= len(steps):
+            print("Cancelled or invalid step number.")
+            return steps
+    except ValueError:
+        print("Invalid input. Please enter a valid step number.")
+        return steps
+
+    # Make a deep copy of the selected step
+    step_to_copy = steps[copy_index].copy()
+    print(f"\nSelected step {copy_index + 1} to copy:")
+    print(f"Description: {step_to_copy.get('description', '')}")
+    print(f"Expected Result: {step_to_copy.get('expected_result', '')}")
+
+    # Ask where to paste
+    print("\nWhere would you like to paste this step?")
+    print("1. Before another step")
+    print("2. After another step")
+    print("3. At the end")
+    choice = input("Choose an option (1/2/3 or press Enter to cancel): ").strip()
+
+    if not choice:
+        print("Copy cancelled.")
+        return steps
+
+    if choice in ("1", "2"):
+        try:
+            target_index = int(input("Enter the target step number: ").strip()) - 1
+            if not (0 <= target_index < len(steps)):
+                print("Invalid target step number.")
+                return steps
+        except ValueError:
+            print("Invalid input.")
+            return steps
+
+        if choice == "1":  # Insert before
+            steps.insert(target_index, step_to_copy)
+            print(f"Step copied before step {target_index + 1}.")
+        elif choice == "2":  # Insert after
+            steps.insert(target_index + 1, step_to_copy)
+            print(f"Step copied after step {target_index + 1}.")
+    elif choice == "3":
+        steps.append(step_to_copy)
+        print("Step copied to the end.")
+    else:
+        print("Invalid option. Copy cancelled.")
+
+    return steps
+
+def delete_test_step_interactive(steps):
+    if not steps:
+        print("No steps available to delete.")
+        return steps
+
+    # Display current steps
+    print("\nCurrent Test Steps:")
+    for i, step in enumerate(steps, start=1):
+        print(f"{i}. {step.get('description', '')}  -> Expected: {step.get('expected_result', '')}")
+
+    # Ask user which step to delete
+    choice = input("\nEnter the number of the step you want to delete (or press Enter to cancel): ").strip()
+
+    if not choice:
+        print("Deletion cancelled.")
+        return steps
+
+    if not choice.isdigit() or not (1 <= int(choice) <= len(steps)):
+        print("Invalid step number.")
+        return steps
+
+    step_index = int(choice) - 1
+    step = steps[step_index]
+
+    # Confirm deletion
+    print(f"\nSelected step {choice}:")
+    print(f"Description: {step.get('description', '')}")
+    print(f"Expected Result: {step.get('expected_result', '')}")
+    confirm = input("Are you sure you want to delete this step? (y/n): ").strip().lower()
+
+    if confirm != "y":
+        print("Deletion cancelled.")
+        return steps
+
+    # Perform deletion
+    deleted = steps.pop(step_index)
+    print(f"Deleted step {choice}: '{deleted.get('description', '')}'")
+
+    # Return updated steps
+    return steps
 
 def is_new_test_case_title_unique(new_title, cases):
     # Enforce unique title
