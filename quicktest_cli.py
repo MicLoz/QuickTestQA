@@ -271,6 +271,7 @@ def edit_test_case_interactive(case_dict: Dict):
                 "Press R to Reorder steps.\n"
                 "Press A to Add a new step.\n"
                 "Press C to Copy an exiting step.\n"
+                "Press D to Delete an exiting step.\n"
                 "(or press Enter to finish): "
             ).strip().lower()
 
